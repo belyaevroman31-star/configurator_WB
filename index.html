@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,theme-color:#060b16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Конфигуратор — WirenBoard</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/mobile.css">
+</head>
+<body>
+
+<!-- ======================== заставка ======================== -->
+<div id="splash" class="splash">
+  <canvas id="splash-canvas"></canvas>
+  <div class="splash-hint">нажмите, чтобы пропустить</div>
+</div>
+
+<!-- ======================== приложение ======================== -->
+<div id="app" class="app hidden">
+
+  <!-- шапка -->
+  <header class="topbar">
+    <div class="topbar__name" id="project-name">Без названия</div>
+    <button class="topbar__btn" id="btn-menu" aria-label="Меню">☰</button>
+    <div id="menu-dropdown" class="menu-dropdown hidden">
+      <button class="menu-dropdown__item" id="menu-new">Новый проект</button>
+      <label class="menu-dropdown__item">Импорт проекта
+        <input type="file" id="menu-import" accept="application/json,.wbconf,.json" hidden>
+      </label>
+      <button class="menu-dropdown__item" id="menu-export">Экспорт .wbconf</button>
+      <button class="menu-dropdown__item" id="menu-clear-spec">Очистить спецификацию</button>
+      <button class="menu-dropdown__item" id="menu-clear-cfg">Очистить конфигурацию</button>
+    </div>
+  </header>
+
+  <!-- основной контент -->
+  <main id="panels">
+
+    <!-- ===== Каталог ===== -->
+    <section class="panel active" data-panel="catalog">
+      <div class="catalog-search">
+        <input id="search" type="search" placeholder="Поиск…">
+        <select id="filter-category"></select>
+      </div>
+      <div id="catalog-grid" class="catalog-grid"></div>
+    </section>
+
+    <!-- ===== Подбор (конфигуратор) ===== -->
+    <section class="panel" data-panel="config">
+      <div class="config-scroll">
+        <h2>Мастер подбора</h2>
+        <label>Тип объекта
+          <select id="cfg-object">
+            <option value="">Выберите…</option>
+            <option value="flat">Квартира</option>
+            <option value="house">Частный дом</option>
+            <option value="office">Офис</option>
+            <option value="retail">Торговое помещение</option>
+            <option value="tech">Техническое помещение</option>
+          </select>
+        </label>
+        <label>Название проекта <input id="cfg-name" type="text" placeholder="Квартира, ЖК Северный"></label>
+        <label>Площадь, м² <input id="cfg-area" type="number" min="10" step="10" placeholder="100"></label>
+        <label>Групп освещения 220 В <input id="cfg-l220" type="number" min="0" step="1" placeholder="6"></label>
+        <label>&nbsp;&nbsp;из них с диммированием <input id="cfg-dim220" type="number" min="0" step="1" placeholder="2"></label>
+        <label>Групп лент 12/24 В <input id="cfg-l12" type="number" min="0" step="1" placeholder="2"></label>
+        <label>&nbsp;&nbsp;из них RGB / RGBW <input id="cfg-rgb12" type="number" min="0" step="1" placeholder="0"></label>
+        <label>Напряжение лент
+          <select id="cfg-stripV"><option value="24">24 В DC</option><option value="12">12 В DC</option></select>
+        </label>
+        <label>Ток на канал, А <input id="cfg-stripA" type="number" min="1" max="10" step="0.5" value="5"></label>
+        <label>Мощность ленты, Вт/м <input id="cfg-stripWm" type="number" min="0" step="0.1" placeholder="0"></label>
+        <label class="chk"><input id="cfg-dimStrips" type="checkbox"> Диммировать ленты (4 канала на 4 ленты)</label>
+        <label>Розеточные группы <input id="cfg-sockets" type="number" min="0" step="1" placeholder="3"></label>
+        <label>Шторы/роллеты <input id="cfg-blinds" type="number" min="0" step="1" placeholder="2"></label>
+        <label>Датчики <input id="cfg-sensors" type="number" min="0" step="1" placeholder="4"></label>
+        <label>Кнопки/выключатели <input id="cfg-keys" type="number" min="0" step="1" placeholder="6"></label>
+
+        <div class="opt">
+          <div class="opt__title">Доп. модули</div>
+          <label class="chk"><input id="cfg-hmi" type="checkbox"> HMI-панель</label>
+          <label class="chk"><input id="cfg-ups" type="checkbox"> ИБП</label>
+          <label class="chk"><input id="cfg-zigbee" type="checkbox"> Zigbee</label>
+          <label class="chk"><input id="cfg-meter" type="checkbox"> Счётчик WB-MAP3EV</label>
+          <label class="chk"><input id="cfg-iso" type="checkbox"> RS-485 изолятор</label>
+          <label class="chk"><input id="cfg-hvd" type="checkbox"> Модуль проходных выключателей</label>
+        </div>
+
+        <button class="btn full" id="cfg-auto">Автоподбор</button>
+        <div id="cfg-warnings" class="warnings"></div>
+
+        <h2>Состав конфигурации</h2>
+        <div id="cfg-list" class="cfg-list"></div>
+        <div class="totals">
+          <span>Позиций: <b id="t-count">0</b></span>
+          <span>Сумма: <b id="t-sum">0 ₽</b></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Спецификация ===== -->
+    <section class="panel" data-panel="spec">
+      <div class="spec-scroll">
+        <h2>Спецификация</h2>
+        <table class="spec-table" id="spec-table">
+          <thead><tr><th>№</th><th>Модель</th><th>Наименование</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead>
+          <tbody></tbody>
+          <tfoot><tr><td colspan="4"></td><td>ИТОГО</td><td id="spec-total">0 ₽</td></tr></tfoot>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- нижняя навигация -->
+  <nav class="bottombar">
+    <button class="bottombar__btn active" data-panel="catalog">
+      <span class="bottombar__icon">📦</span><span class="bottombar__label">Каталог</span>
+    </button>
+    <button class="bottombar__btn" data-panel="config">
+      <span class="bottombar__icon">⚡</span><span class="bottombar__label">Подбор</span>
+    </button>
+    <button class="bottombar__btn" data-panel="spec">
+      <span class="bottombar__icon">📋</span><span class="bottombar__label">Спецификация</span>
+    </button>
+  </nav>
+
+  <!-- баннер установки -->
+  <div id="install-banner" class="install-banner hidden">
+    <div class="install-banner__text">Установить приложение на экран</div>
+    <button class="install-banner__btn" id="btn-install">Установить</button>
+    <button class="install-banner__close" id="btn-install-close">✕</button>
+  </div>
+
+</div>
+
+<!-- модалка ТТХ -->
+<div id="modal" class="modal hidden">
+  <div class="modal__backdrop"></div>
+  <div class="modal__box">
+    <button class="modal__close" id="modal-close">✕</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="data/catalog.js"></script>
+<script src="js/emblem.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/mobile.js"></script>
+</body>
+</html>
